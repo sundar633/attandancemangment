@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup - AI Attendance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 400px;
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    video {
+      display: none;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+
+    .back-button {
+      background: gray;
+    }
+
+    #messageBox {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #e0ffe0;
+      color: #333;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+      font-size: 20px;
+      text-align: center;
+      display: none;
+      animation: zoom 1s ease-in-out infinite alternate;
+    }
+    .success {
+  background: #e0ffe0;
+  color: #333;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+}
+
+.error {
+  background: #ffe0e0;
+  color: #a00;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
+}
+
+    @keyframes zoom {
+      from { transform: translate(-50%, -50%) scale(1); }
+      to   { transform: translate(-50%, -50%) scale(1.1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Signup</h2>
+    <form id="signupForm" onsubmit="return false;">
+      <input type="text" id="name" placeholder="Enter your name" required><br>
+      <input type="text" id="mobile" placeholder="Enter mobile number" required><br>
+      <button type="button" id="openCameraBtn">Take Picture</button><br>
+      <video id="video" width="320" height="240" autoplay></video><br>
+      <button type="button" id="captureBtn" style="display:none;">Capture & Signup</button><br>
+      <a href="/"><button type="button" class="back-button">⬅ Back to Home</button></a>
+    </form>
+  </div>
+
+ <div id="messageBox"></div>
+
+
+  <script>
+    const openCameraBtn = document.getElementById('openCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const video = document.getElementById('video');
+    const resultBox = document.getElementById('resultBox');
+
+    openCameraBtn.addEventListener('click', () => {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          video.style.display = 'block';
+          captureBtn.style.display = 'inline-block';
+          openCameraBtn.style.display = 'none';
+        })
+        .catch(err => {
+          alert('Camera access denied or not available.');
+          console.error(err);
+        });
+    });
+
+    captureBtn.addEventListener('click', () => {
+      const name = document.getElementById('name').value.trim();
+      const mobile = document.getElementById('mobile').value.trim();
+
+      if (!name || !mobile) {
+        alert('Please fill in name and mobile number.');
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = canvas.toDataURL('image/jpeg');
+
+      fetch('/signup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, mobile, image: imageData })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Signup failed');
+        return res.text();
+      })
+      .then(msg => {
+  messageBox.innerHTML = `✅<br><strong>Signup Successful</strong>`;
+  messageBox.className = 'success';
+  messageBox.style.display = 'block';
+
+// Auto-hide after 3 seconds
+setTimeout(() => {
+  resultBox.style.display = 'none';
+}, 3000);
+
+
+        // Stop camera
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(track => track.stop());
+        }
+
+        video.style.display = 'none';
+        captureBtn.style.display = 'none';
+      })
+      .catch(err => alert('Error: ' + err.message));
+    });
+  </script>
+</body>
+</html>
